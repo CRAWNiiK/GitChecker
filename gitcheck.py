@@ -24,12 +24,11 @@ __________________________________________________
 def set_console_title(title):
     os.system(f'title {title}' if platform.system() == 'Windows' else f'\033]0;{title}\007')
 
-def get_github_user(username, include_repos=False, include_starred=False):
+def get_github_user(username, include_repos=False):
     api_url_user = f'https://api.github.com/users/{username}'
     api_url_repos = f'https://api.github.com/users/{username}/repos'
-    api_url_starred = f'https://api.github.com/users/{username}/starred'
-    status_user, status_repos, status_starred = 200, 200, 200
-    user_data, repos_data, starred_data = {}, [], []
+    status_user, status_repos = 200, 200
+    user_data, repos_data = {}, []
 
     try:
         response_user = requests.get(api_url_user)
@@ -41,13 +40,6 @@ def get_github_user(username, include_repos=False, include_starred=False):
 
             # Sort repositories by stars in descending order
             repos_data.sort(key=lambda x: x['stargazers_count'], reverse=True)
-
-        if include_starred:
-            response_starred = requests.get(api_url_starred)
-            status_starred, starred_data = response_starred.status_code, response_starred.json()
-
-            # Sort starred repositories by stars in descending order
-            starred_data.sort(key=lambda x: x['stargazers_count'], reverse=True)
 
     except requests.exceptions.RequestException as e:
         print(Fore.RED + f"Error: {e}")
@@ -68,21 +60,10 @@ def get_github_user(username, include_repos=False, include_starred=False):
                 print(f"Stars: {repo['stargazers_count']}")
                 print(Fore.RED + f"Link: {repo['html_url']}")
                 print(Fore.MAGENTA + f"Git Clone Command: git clone {repo['clone_url']}")
-
-        if include_starred and status_starred == 200:
-            print(Fore.GREEN + "\nStarred Repositories (sorted by stars):")
-            for starred_repo in starred_data:
-                print(Fore.YELLOW + f"\nRepository: {starred_repo['name']}")
-                print(f"Description: {starred_repo['description']}")
-                print(f"Stars: {starred_repo['stargazers_count']}")
-                print(Fore.RED + f"Link: {starred_repo['html_url']}")
-                print(Fore.MAGENTA + f"Git Clone Command: git clone {starred_repo['clone_url']}")
     else:
         print(Fore.RED + f"Error: Unable to fetch GitHub user information. Status Code: {status_user}")
         if include_repos:
             print(Fore.RED + f"Error: Unable to fetch repository information. Status Code: {status_repos}")
-        if include_starred:
-            print(Fore.RED + f"Error: Unable to fetch starred repositories. Status Code: {status_starred}")
 
 def main():
     clear_console()
@@ -90,9 +71,12 @@ def main():
     parser = argparse.ArgumentParser(description='Fetch and display information about a GitHub user.')
     parser.add_argument('username', type=str, help='GitHub username')
     parser.add_argument('--repos', '-r', action='store_true', help='Include public repositories information')
-    parser.add_argument('--starred', '-s', action='store_true', help='Include starred repositories information')
     args = parser.parse_args()
-    get_github_user(args.username, args.repos, args.starred)
+
+    if not args.repos:
+        print(Fore.YELLOW + f"Note: Use '--repos' if you want to see all of {args.username}'s repositories.")
+
+    get_github_user(args.username, args.repos)
 
 if __name__ == "__main__":
     main()
